@@ -1,42 +1,28 @@
 package com.fit.iuh.gateway_server.filter;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
-import org.springframework.http.HttpStatus;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fit.iuh.gateway_server.client.UserInternalClient;
+import com.fit.iuh.gateway_server.config.security.GatewayRouteAuthorization;
+import com.fit.iuh.gateway_server.config.security.UserAccessResolver;
 import com.fit.iuh.gateway_server.constant.base.ErrorCode;
-import com.fit.iuh.gateway_server.dto.ApiResponse;
-import com.fit.iuh.gateway_server.dto.UserAccess;
+import com.fit.iuh.gateway_server.dto.GatewayErrorResponseWriter;
 
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class UserHeaderFilter implements GlobalFilter {
 
-    private final ObjectProvider<@NonNull UserInternalClient> userInternalClientProvider;
-    private final ObjectMapper objectMapper;
+    private final UserAccessResolver userAccessResolver;
+    private final GatewayRouteAuthorization routeAuthorization;
+    private final GatewayErrorResponseWriter errorResponseWriter;
 
     /**
      * Filter chính của Gateway.
@@ -56,12 +42,10 @@ public class UserHeaderFilter implements GlobalFilter {
                     String userId = jwtAuth.getToken().getSubject();
                     String email = jwtAuth.getToken().getClaim("email");
 
-                    String jwtRole = resolveRoleFromJwt(jwtAuth);
-
-                    return fetchUserAccess(userId, jwtRole)
+                    return userAccessResolver.resolve(jwtAuth)
                             .flatMap(access -> {
-                                if (!isAllowed(exchange, access.role())) {
-                                    return writeErrorResponse(exchange, ErrorCode.UNAUTHORIZED);
+                                if (!routeAuthorization.isAllowed(exchange, access.role())) {
+                                    return errorResponseWriter.write(exchange, ErrorCode.UNAUTHORIZED);
                                 }
 
                                 ServerHttpRequest mutatedRequest =
@@ -76,135 +60,6 @@ public class UserHeaderFilter implements GlobalFilter {
                             });
                 })
                 .switchIfEmpty(chain.filter(exchange));
-    }
-
-    /**
-     * Lấy role và permission mới nhất từ User Service bằng Feign Client.
-     * Nếu User Service lỗi hoặc chưa trả dữ liệu thì dùng role lấy từ JWT để request vẫn tiếp tục.
-     * Sử dụng boundedElastic vì Feign là blocking call, không nên chạy trực tiếp trên reactive thread.
-     */
-    private Mono<@NonNull UserAccess> fetchUserAccess(String userId, String fallbackRole) {
-        return Mono.fromCallable(() -> {
-                    UserInternalClient client = userInternalClientProvider.getIfAvailable();
-                    return (client != null) ? client.getUserPermissions(userId) : null;
-                })
-                .subscribeOn(Schedulers.boundedElastic())
-                .map(response -> {
-                    if (response != null && response.getResult() != null) {
-                        String role = normalizeRole(response.getResult().role());
-                        if (role.isBlank()) {
-                            role = fallbackRole;
-                        }
-                        String authorities = response.getResult().permissions() != null
-                                ? String.join(",", response.getResult().permissions())
-                                : "";
-                        return new UserAccess(role, authorities);
-                    }
-                    return new UserAccess(fallbackRole, "");
-                })
-                .defaultIfEmpty(new UserAccess(fallbackRole, ""))
-                .onErrorResume(ex -> {
-                    log.warn(
-                            "Could not fetch user access for userId {}. Falling back to JWT role '{}'. Reason: {}",
-                            userId,
-                            fallbackRole,
-                            ex.getMessage()
-                    );
-                    return Mono.just(new UserAccess(fallbackRole, ""));
-                });
-    }
-
-    /**
-     * Đọc role từ JWT do Keycloak cấp.
-     * Ưu tiên realm_access trước, sau đó mới kiểm tra resource_access của từng client.
-     */
-    private String resolveRoleFromJwt(JwtAuthenticationToken jwtAuth) {
-        List<String> rolePriority = List.of("ADMIN", "CUSTOMER");
-
-        Object realmAccess = jwtAuth.getToken().getClaims().get("realm_access");
-        if (realmAccess instanceof Map<?, ?> map) {
-            String role = findFirstKnownRole(map.get("roles"), rolePriority);
-            if (!role.isBlank()) {
-                return role;
-            }
-        }
-
-        Object resourceAccess = jwtAuth.getToken().getClaims().get("resource_access");
-        if (resourceAccess instanceof Map<?, ?> clients) {
-            for (Object clientAccess : clients.values()) {
-                if (clientAccess instanceof Map<?, ?> map) {
-                    String role = findFirstKnownRole(map.get("roles"), rolePriority);
-                    if (!role.isBlank()) {
-                        return role;
-                    }
-                }
-            }
-        }
-
-        return "";
-    }
-
-    /**
-     * Tìm role đầu tiên nằm trong danh sách role hệ thống đang hỗ trợ.
-     * Role được normalize trước khi so sánh để tránh lệch do prefix ROLE_ hoặc chữ thường/chữ hoa.
-     */
-    private String findFirstKnownRole(Object rolesObject, List<String> rolePriority) {
-        if (!(rolesObject instanceof Collection<?> roles)) {
-            return "";
-        }
-
-        List<String> normalizedRoles = roles.stream()
-                .filter(Objects::nonNull)
-                .map(Object::toString)
-                .map(this::normalizeRole)
-                .toList();
-
-        return rolePriority.stream()
-                .filter(normalizedRoles::contains)
-                .findFirst()
-                .orElse("");
-    }
-
-    /**
-     * Chuẩn hóa role về cùng một format để dễ so sánh.
-     * Ví dụ: ROLE_ADMIN, admin đều được đưa về ADMIN.
-     */
-    private String normalizeRole(String role) {
-        return role == null ? "" : role.replaceFirst("^ROLE_", "").toUpperCase();
-    }
-
-    /**
-     * Kiểm tra request hiện tại có được phép đi tiếp theo role hay không.
-     * Hiện tại dự án chỉ giới hạn các endpoint /admin cho ADMIN; các route khác cho đi tiếp.
-     */
-    private boolean isAllowed(ServerWebExchange exchange, String role) {
-        String path = exchange.getRequest().getPath().pathWithinApplication().value();
-
-        if (path.matches("^/[^/]+-service/admin(/.*)?$")) {
-            return "ADMIN".equals(role);
-        }
-
-        return true;
-    }
-
-    private Mono<Void> writeErrorResponse(ServerWebExchange exchange, ErrorCode errorCode) {
-        var response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.valueOf(errorCode.getStatusCode().value()));
-        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-
-        ApiResponse<Void> body = ApiResponse.<Void>builder()
-                .code(errorCode.getCode())
-                .message(errorCode.getMessage())
-                .build();
-
-        try {
-            byte[] bytes = objectMapper.writeValueAsBytes(body);
-            response.getHeaders().setContentLength(bytes.length);
-            DataBuffer buffer = response.bufferFactory().wrap(bytes);
-            return response.writeWith(Mono.just(buffer));
-        } catch (JsonProcessingException exception) {
-            return response.setComplete();
-        }
     }
 
     /**

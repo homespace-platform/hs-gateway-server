@@ -1,0 +1,47 @@
+package com.fit.iuh.gateway_server.config.security;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+
+import com.fit.iuh.gateway_server.constant.base.ErrorCode;
+import com.fit.iuh.gateway_server.dto.GatewayErrorResponseWriter;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityWebFilterChain springSecurityFilterChain(
+            ServerHttpSecurity http,
+            GatewayErrorResponseWriter errorResponseWriter
+    ) {
+        http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((exchange, exception) ->
+                                errorResponseWriter.write(exchange, ErrorCode.UNAUTHENTICATED))
+                        .accessDeniedHandler((exchange, exception) ->
+                                errorResponseWriter.write(exchange, ErrorCode.UNAUTHORIZED)))
+                .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers("/actuator/**").permitAll()
+                        .pathMatchers("/fallback/**").permitAll()
+                        // User Service
+                        .pathMatchers("/user-service/actuator/prometheus").permitAll()
+                        .pathMatchers("/user-service/public/**").permitAll()
+                        .pathMatchers("/user-service/internal/**").denyAll()
+                        .pathMatchers("/user-service/**").authenticated()
+                        // Add Service here ...
+                        .anyExchange().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationEntryPoint((exchange, exception) ->
+                                errorResponseWriter.write(exchange, ErrorCode.UNAUTHENTICATED))
+                        .accessDeniedHandler((exchange, exception) ->
+                                errorResponseWriter.write(exchange, ErrorCode.UNAUTHORIZED))
+                        .jwt(Customizer.withDefaults()));
+        return http.build();
+    }
+}
