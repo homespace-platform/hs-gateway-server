@@ -24,6 +24,8 @@ import com.fit.iuh.gateway_server.filter.InternalRateLimiterGatewayFilter;
 public class GatewayServerApplication {
 
 	private static final Logger log = LoggerFactory.getLogger(GatewayServerApplication.class);
+	private static final String API_V1_PREFIX = "/api/v1";
+	private static final String USER_SERVICE_ROUTE_ID = "user-service-route";
 
 	@Value("${service.url.user}")
 	private String userServiceUrl;
@@ -47,15 +49,15 @@ public class GatewayServerApplication {
 
 		return builder.routes()
 				// User Service
-				.route("user-service-route", r -> r
-						.path("/user-service/**")
+				.route(USER_SERVICE_ROUTE_ID, r -> r
+						.path(API_V1_PREFIX + "/**")
 						.filters(f -> commonFilters(
 								f,
 								defaultRateLimiter,
 								ipKeyResolver,
 								internalRateLimiterGatewayFilter,
-								"user-service-route",
-								"/user-service",
+								USER_SERVICE_ROUTE_ID,
+								API_V1_PREFIX,
 								"userServiceCircuitBreaker",
 								"forward:/fallback/user-service",
 								circuitBreakerEnabled))

@@ -7,7 +7,7 @@ import org.springframework.web.server.ServerWebExchange;
 public class GatewayRouteAuthorization {
 
     private static final String ADMIN_ROLE = "ADMIN";
-    private static final String ADMIN_ROUTE_PATTERN = "^/[^/]+-service/admin(/.*)?$";
+    private static final String ADMIN_ROUTE_PATTERN = "^/api/v\\d+/admin(/.*)?$";
 
     public boolean isAllowed(ServerWebExchange exchange, String role) {
         String path = exchange.getRequest().getPath().pathWithinApplication().value();

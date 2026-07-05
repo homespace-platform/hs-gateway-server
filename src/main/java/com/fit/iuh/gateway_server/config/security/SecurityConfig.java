@@ -13,6 +13,8 @@ import com.fit.iuh.gateway_server.dto.GatewayErrorResponseWriter;
 @Configuration
 public class SecurityConfig {
 
+    private static final String API_V1_PREFIX = "/api/v1";
+
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(
             ServerHttpSecurity http,
@@ -30,10 +32,10 @@ public class SecurityConfig {
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/fallback/**").permitAll()
                         // User Service
-                        .pathMatchers("/user-service/actuator/prometheus").permitAll()
-                        .pathMatchers("/user-service/public/**").permitAll()
-                        .pathMatchers("/user-service/internal/**").denyAll()
-                        .pathMatchers("/user-service/**").authenticated()
+                        .pathMatchers(API_V1_PREFIX + "/actuator/prometheus").permitAll()
+                        .pathMatchers(API_V1_PREFIX + "/public/**").permitAll()
+                        .pathMatchers(API_V1_PREFIX + "/internal/**").denyAll()
+                        .pathMatchers(API_V1_PREFIX + "/**").authenticated()
                         // Add Service here ...
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
