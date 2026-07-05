@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fit.iuh.gateway_server.constant.base.ErrorCode;
 import com.fit.iuh.gateway_server.dto.ApiResponse;
 
 import reactor.core.publisher.Mono;
@@ -45,10 +46,11 @@ public class GatewayFallbackController {
     }
 
     private Mono<ResponseEntity<ApiResponse<Void>>> buildFallbackResponse(String serviceName) {
-        ApiResponse<Void> body = new ApiResponse<>(
-                "Service " + serviceName + " is temporarily unavailable. Please try again later.",
-                HttpStatus.SERVICE_UNAVAILABLE.value()
-        );
+        ErrorCode errorCode = ErrorCode.SERVICE_UNAVAILABLE;
+        ApiResponse<Void> body = ApiResponse.<Void>builder()
+                .code(errorCode.getCode())
+                .message("Service " + serviceName + " is temporarily unavailable. Please try again later.")
+                .build();
         return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body));
     }
 }

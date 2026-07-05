@@ -1,39 +1,25 @@
 package com.fit.iuh.gateway_server.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.*;
+
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
-
+@Getter
+@Setter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
-@Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
-
-    private String errorMessage;
-    private Integer errorCode;
-    private T data;
-
-    // ==================================
-    // Trả về API Response chứa lỗi
-    // data sẽ null
-    // ==================================
-    public ApiResponse(String errorMessage, Integer errorCode) {
-        this.errorMessage = errorMessage;
-        this.errorCode = errorCode;
-        this.data = null;
-    }
-
-    // ==================================
-    // Trả về API Response bình thường
-    // errorMessage và errorCode sẽ null
-    // ==================================
-    public ApiResponse(T data) {
-        this.data = data;
-        this.errorMessage = null;
-        this.errorCode = null;
-    }
+    @Builder.Default
+    int code = 1000;
+    String message;
+    T result;
 }

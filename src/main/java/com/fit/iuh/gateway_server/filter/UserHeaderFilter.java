@@ -8,12 +8,18 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.http.HttpStatus;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fit.iuh.gateway_server.client.UserInternalClient;
+import com.fit.iuh.gateway_server.constant.base.ErrorCode;
+import com.fit.iuh.gateway_server.dto.ApiResponse;
 import com.fit.iuh.gateway_server.dto.UserAccess;
 
 import reactor.core.publisher.Mono;
@@ -30,6 +36,7 @@ import java.util.Objects;
 public class UserHeaderFilter implements GlobalFilter {
 
     private final ObjectProvider<@NonNull UserInternalClient> userInternalClientProvider;
+    private final ObjectMapper objectMapper;
 
     /**
      * Filter chính của Gateway.
@@ -54,8 +61,7 @@ public class UserHeaderFilter implements GlobalFilter {
                     return fetchUserAccess(userId, jwtRole)
                             .flatMap(access -> {
                                 if (!isAllowed(exchange, access.role())) {
-                                    exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                                    return exchange.getResponse().setComplete();
+                                    return writeErrorResponse(exchange, ErrorCode.UNAUTHORIZED);
                                 }
 
                                 ServerHttpRequest mutatedRequest =
@@ -84,13 +90,13 @@ public class UserHeaderFilter implements GlobalFilter {
                 })
                 .subscribeOn(Schedulers.boundedElastic())
                 .map(response -> {
-                    if (response != null && response.getData() != null) {
-                        String role = normalizeRole(response.getData().role());
+                    if (response != null && response.getResult() != null) {
+                        String role = normalizeRole(response.getResult().role());
                         if (role.isBlank()) {
                             role = fallbackRole;
                         }
-                        String authorities = response.getData().permissions() != null
-                                ? String.join(",", response.getData().permissions())
+                        String authorities = response.getResult().permissions() != null
+                                ? String.join(",", response.getResult().permissions())
                                 : "";
                         return new UserAccess(role, authorities);
                     }
@@ -179,6 +185,25 @@ public class UserHeaderFilter implements GlobalFilter {
         }
 
         return true;
+    }
+
+    private Mono<Void> writeErrorResponse(ServerWebExchange exchange, ErrorCode errorCode) {
+        var response = exchange.getResponse();
+        response.setStatusCode(HttpStatus.valueOf(errorCode.getStatusCode().value()));
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        ApiResponse<Void> body = ApiResponse.<Void>builder()
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .build();
+
+        try {
+            byte[] bytes = objectMapper.writeValueAsBytes(body);
+            DataBuffer buffer = response.bufferFactory().wrap(bytes);
+            return response.writeWith(Mono.just(buffer));
+        } catch (JsonProcessingException exception) {
+            return response.setComplete();
+        }
     }
 
     /**
