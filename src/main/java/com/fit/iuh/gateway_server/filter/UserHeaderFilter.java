@@ -99,7 +99,7 @@ public class UserHeaderFilter implements GlobalFilter {
                 .defaultIfEmpty(new UserAccess(fallbackRole, ""))
                 .onErrorResume(ex -> {
                     log.warn(
-                            "Could not fetch user access for keycloakId {}. Falling back to JWT role '{}'. Reason: {}",
+                            "Could not fetch user access for userId {}. Falling back to JWT role '{}'. Reason: {}",
                             userId,
                             fallbackRole,
                             ex.getMessage()
@@ -189,7 +189,7 @@ public class UserHeaderFilter implements GlobalFilter {
             String email, String role, String authorities
     ) {
         return exchange.getRequest().mutate()
-                .header("X-User-KeycloakId", userId)
+                .header("X-User-Id", userId)
                 .header("X-User-Email", email)
                 .header("X-User-Role", role)
                 .header("X-User-Authorities", authorities)

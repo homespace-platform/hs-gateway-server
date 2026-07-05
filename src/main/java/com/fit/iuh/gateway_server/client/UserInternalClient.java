@@ -10,7 +10,7 @@ import com.fit.iuh.gateway_server.dto.UserPermissionsResponse;
 @FeignClient(name = "user-service", url = "${service.url.user}", path = "/internal/users")
 public interface UserInternalClient {
 
-    @GetMapping("/{keycloakId}/permissions")
-    ApiResponse<UserPermissionsResponse> getUserPermissions(@PathVariable("keycloakId") String keycloakId);
+    @GetMapping("/{userId}/permissions")
+    ApiResponse<UserPermissionsResponse> getUserPermissions(@PathVariable("userId") String userId);
 
 }
