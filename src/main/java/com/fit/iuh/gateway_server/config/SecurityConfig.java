@@ -40,7 +40,12 @@ public class SecurityConfig {
                         .pathMatchers("/user-service/**").authenticated()
                         // Add Service here ...
                         .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationEntryPoint((exchange, exception) ->
+                                writeErrorResponse(exchange, ErrorCode.UNAUTHENTICATED, objectMapper))
+                        .accessDeniedHandler((exchange, exception) ->
+                                writeErrorResponse(exchange, ErrorCode.UNAUTHORIZED, objectMapper))
+                        .jwt(Customizer.withDefaults()));
         return http.build();
     }
 
@@ -60,6 +65,7 @@ public class SecurityConfig {
 
         try {
             byte[] bytes = objectMapper.writeValueAsBytes(body);
+            response.getHeaders().setContentLength(bytes.length);
             DataBuffer buffer = response.bufferFactory().wrap(bytes);
             return response.writeWith(Mono.just(buffer));
         } catch (JsonProcessingException exception) {

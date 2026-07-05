@@ -16,6 +16,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 
+import com.fit.iuh.gateway_server.filter.InternalRateLimiterGatewayFilter;
+
 @SpringBootApplication
 @EnableWebFluxSecurity
 @EnableFeignClients
@@ -35,6 +37,7 @@ public class GatewayServerApplication {
 			RouteLocatorBuilder builder,
 			RedisRateLimiter defaultRateLimiter,
 			KeyResolver ipKeyResolver,
+			InternalRateLimiterGatewayFilter internalRateLimiterGatewayFilter,
 			ObjectProvider<SpringCloudCircuitBreakerFilterFactory> circuitBreakerFilterFactory) {
 
 		boolean circuitBreakerEnabled = circuitBreakerFilterFactory.getIfAvailable() != null;
@@ -50,6 +53,8 @@ public class GatewayServerApplication {
 								f,
 								defaultRateLimiter,
 								ipKeyResolver,
+								internalRateLimiterGatewayFilter,
+								"user-service-route",
 								"/user-service",
 								"userServiceCircuitBreaker",
 								"forward:/fallback/user-service",
@@ -62,6 +67,8 @@ public class GatewayServerApplication {
 			GatewayFilterSpec filters,
 			RedisRateLimiter defaultRateLimiter,
 			KeyResolver ipKeyResolver,
+			InternalRateLimiterGatewayFilter internalRateLimiterGatewayFilter,
+			String routeId,
 			String servicePath,
 			String circuitBreakerName,
 			String fallbackUri,
@@ -69,7 +76,7 @@ public class GatewayServerApplication {
 
 		GatewayFilterSpec spec = filters
 				.rewritePath(servicePath + "/(?<segment>.*)", "/${segment}")
-				.requestRateLimiter(c -> c.setRateLimiter(defaultRateLimiter).setKeyResolver(ipKeyResolver));
+				.filter(internalRateLimiterGatewayFilter.apply(routeId, defaultRateLimiter, ipKeyResolver));
 
 		if (!circuitBreakerEnabled)
 			return spec;

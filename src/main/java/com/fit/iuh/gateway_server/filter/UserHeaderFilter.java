@@ -199,6 +199,7 @@ public class UserHeaderFilter implements GlobalFilter {
 
         try {
             byte[] bytes = objectMapper.writeValueAsBytes(body);
+            response.getHeaders().setContentLength(bytes.length);
             DataBuffer buffer = response.bufferFactory().wrap(bytes);
             return response.writeWith(Mono.just(buffer));
         } catch (JsonProcessingException exception) {
