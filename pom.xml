@@ -8,8 +8,8 @@
 		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.fit.iuh</groupId>
-	<artifactId>gateway-server</artifactId>
+	<groupId>com.hs</groupId>
+	<artifactId>hs-gateway-server</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>
