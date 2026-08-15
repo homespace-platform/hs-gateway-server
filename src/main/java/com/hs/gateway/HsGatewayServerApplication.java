@@ -2,7 +2,6 @@ package com.hs.gateway;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -25,10 +24,8 @@ public class HsGatewayServerApplication {
 
 	private static final Logger log = LoggerFactory.getLogger(HsGatewayServerApplication.class);
 	private static final String API_V1_PREFIX = "/api/v1";
-	private static final String USER_SERVICE_ROUTE_ID = "user-service-route";
-
-	@Value("${service.url.user}")
-	private String userServiceUrl;
+	private static final String CORE_SERVICE_ROUTE_ID = "core-service-route";
+	private static final String CORE_SERVICE_URI = "lb://hs-core-api";
 
 	public static void main(String[] args) {
 		SpringApplication.run(HsGatewayServerApplication.class, args);
@@ -48,20 +45,20 @@ public class HsGatewayServerApplication {
 		}
 
 		return builder.routes()
-				// User Service
-				.route(USER_SERVICE_ROUTE_ID, r -> r
+				// Modular Monolith Core Service
+				.route(CORE_SERVICE_ROUTE_ID, r -> r
 						.path(API_V1_PREFIX + "/**")
 						.filters(f -> commonFilters(
 								f,
 								defaultRateLimiter,
 								ipKeyResolver,
 								internalRateLimiterGatewayFilter,
-								USER_SERVICE_ROUTE_ID,
+								CORE_SERVICE_ROUTE_ID,
 								API_V1_PREFIX,
 								"userServiceCircuitBreaker",
 								"forward:/fallback/user-service",
 								circuitBreakerEnabled))
-						.uri(userServiceUrl))
+						.uri(CORE_SERVICE_URI))
 				.build();
 	}
 

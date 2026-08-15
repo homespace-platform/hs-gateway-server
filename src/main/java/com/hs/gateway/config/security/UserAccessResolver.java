@@ -23,7 +23,7 @@ import reactor.core.scheduler.Schedulers;
 @Slf4j
 public class UserAccessResolver {
 
-    private static final List<String> ROLE_PRIORITY = List.of("ADMIN", "CUSTOMER");
+    private static final List<String> ROLE_PRIORITY = List.of("ADMIN", "USER");
 
     private final ObjectProvider<@NonNull UserInternalClient> userInternalClientProvider;
 

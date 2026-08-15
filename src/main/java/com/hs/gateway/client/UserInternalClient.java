@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import com.hs.gateway.dto.ApiResponse;
 import com.hs.gateway.dto.UserPermissionsResponse;
 
-@FeignClient(name = "user-service", url = "${service.url.user}", path = "/internal/users")
+@FeignClient(name = "hs-core-api", path = "/internal/users")
 public interface UserInternalClient {
 
     @GetMapping("/{userId}/permissions")
