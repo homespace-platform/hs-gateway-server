@@ -6,7 +6,7 @@ import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.stereotype.Component;
 
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.GatewayErrorResponseWriter;
 
 @Component

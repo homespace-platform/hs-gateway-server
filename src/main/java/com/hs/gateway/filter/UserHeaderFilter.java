@@ -11,7 +11,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 import com.hs.gateway.config.security.GatewayRouteAuthorization;
 import com.hs.gateway.config.security.UserAccessResolver;
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.GatewayErrorResponseWriter;
 
 import reactor.core.publisher.Mono;

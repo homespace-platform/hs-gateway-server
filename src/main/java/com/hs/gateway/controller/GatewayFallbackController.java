@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.ApiResponse;
 
 import reactor.core.publisher.Mono;

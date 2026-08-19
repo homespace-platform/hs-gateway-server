@@ -7,7 +7,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.GatewayErrorResponseWriter;
 
 @Configuration

@@ -2,7 +2,7 @@ package com.hs.gateway.dto;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.buffer.DataBuffer;

@@ -1,6 +1,6 @@
-package com.hs.gateway.advice.base;
+package com.hs.gateway.advice.entity;
 
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 
 import lombok.AccessLevel;
 import lombok.Getter;

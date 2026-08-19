@@ -9,7 +9,7 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.GatewayErrorResponseWriter;
 
 import reactor.core.publisher.Mono;

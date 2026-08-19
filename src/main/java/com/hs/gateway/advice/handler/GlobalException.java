@@ -1,7 +1,7 @@
-package com.hs.gateway.advice.exception;
+package com.hs.gateway.advice.handler;
 
-import com.hs.gateway.advice.base.AppException;
-import com.hs.gateway.constant.base.ErrorCode;
+import com.hs.gateway.advice.entity.AppException;
+import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.ApiResponse;
 
 import lombok.extern.slf4j.Slf4j;

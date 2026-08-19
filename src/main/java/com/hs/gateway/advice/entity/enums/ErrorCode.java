@@ -1,4 +1,4 @@
-package com.hs.gateway.constant.base;
+package com.hs.gateway.advice.entity.enums;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
