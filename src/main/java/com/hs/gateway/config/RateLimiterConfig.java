@@ -23,9 +23,9 @@ public class RateLimiterConfig {
 
     @Bean
     public RedisRateLimiter defaultRateLimiter(
-            @Value("${gateway.rate-limiter.replenish-rate:5}") int replenishRate,
-            @Value("${gateway.rate-limiter.burst-capacity:10}") int burstCapacity,
-            @Value("${gateway.rate-limiter.requested-tokens:1}") int requestedTokens) {
+            @Value("${gateway.rate-limiter.replenish-rate}") int replenishRate,
+            @Value("${gateway.rate-limiter.burst-capacity}") int burstCapacity,
+            @Value("${gateway.rate-limiter.requested-tokens}") int requestedTokens) {
         return new RedisRateLimiter(replenishRate, burstCapacity, requestedTokens);
     }
 }
