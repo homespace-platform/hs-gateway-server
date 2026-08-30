@@ -34,6 +34,7 @@ public class SecurityConfig {
                         // User Service
                         .pathMatchers(API_V1_PREFIX + "/actuator/prometheus").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/public/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/me").authenticated()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/storage/*/view-url").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/internal/**").denyAll()
