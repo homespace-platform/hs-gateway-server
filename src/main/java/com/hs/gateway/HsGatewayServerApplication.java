@@ -26,6 +26,9 @@ public class HsGatewayServerApplication {
 	private static final String API_V1_PREFIX = "/api/v1";
 	private static final String CORE_SERVICE_ROUTE_ID = "core-service-route";
 	private static final String CORE_SERVICE_URI = "lb://hs-core-api";
+	private static final String CHAT_SERVICE_ROUTE_ID = "chat-service-route";
+	private static final String CHAT_SERVICE_PATH = API_V1_PREFIX + "/chat";
+	private static final String CHAT_SERVICE_URI = "lb://hs-chat-service";
 
 	public static void main(String[] args) {
 		SpringApplication.run(HsGatewayServerApplication.class, args);
@@ -45,6 +48,20 @@ public class HsGatewayServerApplication {
 		}
 
 		return builder.routes()
+				// Standalone Chat Service (must be declared before the core catch-all route)
+				.route(CHAT_SERVICE_ROUTE_ID, r -> r
+						.path(CHAT_SERVICE_PATH + "/**")
+						.filters(f -> commonFilters(
+								f,
+								defaultRateLimiter,
+								ipKeyResolver,
+								internalRateLimiterGatewayFilter,
+								CHAT_SERVICE_ROUTE_ID,
+								CHAT_SERVICE_PATH,
+								"chatServiceCircuitBreaker",
+								"forward:/fallback/chat-service",
+								circuitBreakerEnabled))
+						.uri(CHAT_SERVICE_URI))
 				// Modular Monolith Core Service
 				.route(CORE_SERVICE_ROUTE_ID, r -> r
 						.path(API_V1_PREFIX + "/**")
