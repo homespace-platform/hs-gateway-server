@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .pathMatchers(API_V1_PREFIX + "/actuator/prometheus").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/public/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/chat/ping").permitAll()
+                        .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/news/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/me").authenticated()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/appointments/availability/**").permitAll()

@@ -29,6 +29,9 @@ public class HsGatewayServerApplication {
 	private static final String CHAT_SERVICE_ROUTE_ID = "chat-service-route";
 	private static final String CHAT_SERVICE_PATH = API_V1_PREFIX + "/chat";
 	private static final String CHAT_SERVICE_URI = "lb://hs-chat-service";
+	private static final String NEWS_SERVICE_ROUTE_ID = "news-service-route";
+	private static final String NEWS_SERVICE_PATH = API_V1_PREFIX + "/news";
+	private static final String NEWS_SERVICE_URI = "lb://hs-news-service";
 
 	public static void main(String[] args) {
 		SpringApplication.run(HsGatewayServerApplication.class, args);
@@ -48,6 +51,20 @@ public class HsGatewayServerApplication {
 		}
 
 		return builder.routes()
+				// Standalone News Service
+				.route(NEWS_SERVICE_ROUTE_ID, r -> r
+						.path(NEWS_SERVICE_PATH + "/**")
+						.filters(f -> commonFilters(
+								f,
+								defaultRateLimiter,
+								ipKeyResolver,
+								internalRateLimiterGatewayFilter,
+								NEWS_SERVICE_ROUTE_ID,
+								NEWS_SERVICE_PATH,
+								"newsServiceCircuitBreaker",
+								"forward:/fallback/news-service",
+								circuitBreakerEnabled))
+						.uri(NEWS_SERVICE_URI))
 				// Standalone Chat Service (must be declared before the core catch-all route)
 				.route(CHAT_SERVICE_ROUTE_ID, r -> r
 						.path(CHAT_SERVICE_PATH + "/**")
