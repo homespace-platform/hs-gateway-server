@@ -1,0 +1,35 @@
+package com.hs.gateway.filter;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+class UserHeaderFilterTest {
+
+    @Test
+    void resolvesDisplayNameWithEmailFallback() {
+        Jwt named = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject("admin-1")
+                .claim("email", "admin@homespace.vn")
+                .claim("name", "Home Space Admin")
+                .build();
+        Jwt unnamed = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject("admin-1")
+                .claim("email", "admin@homespace.vn")
+                .build();
+        Jwt splitName = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject("admin-1")
+                .claim("email", "admin@homespace.vn")
+                .claim("given_name", "Home")
+                .claim("family_name", "Space")
+                .build();
+
+        assertThat(UserHeaderFilter.resolveDisplayName(named)).isEqualTo("Home Space Admin");
+        assertThat(UserHeaderFilter.resolveDisplayName(splitName)).isEqualTo("Home Space");
+        assertThat(UserHeaderFilter.resolveDisplayName(unnamed)).isEqualTo("admin@homespace.vn");
+    }
+}

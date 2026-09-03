@@ -5,6 +5,7 @@ import org.jspecify.annotations.NullMarked;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -53,6 +54,7 @@ public class UserHeaderFilter implements GlobalFilter {
                                                 exchange,
                                                 userId,
                                                 email,
+                                                resolveDisplayName(jwtAuth.getToken()),
                                                 access.role(),
                                                 access.authorities()
                                         );
@@ -67,14 +69,29 @@ public class UserHeaderFilter implements GlobalFilter {
      */
     private ServerHttpRequest mutateRequest(
             ServerWebExchange exchange, String userId,
-            String email, String role, String authorities
+            String email, String name, String role, String authorities
     ) {
         return exchange.getRequest().mutate()
                 .header("X-User-Id", userId)
                 .header("X-User-Email", email)
+                .header("X-User-Name", name)
                 .header("X-User-Role", role)
                 .header("X-User-Authorities", authorities)
                 .build();
+    }
+
+    static String resolveDisplayName(Jwt jwt) {
+        String name = jwt.getClaimAsString("name");
+        if (name != null && !name.isBlank()) return name.trim();
+
+        String givenName = jwt.getClaimAsString("given_name");
+        String familyName = jwt.getClaimAsString("family_name");
+        String splitName = ((givenName == null ? "" : givenName) + " "
+                + (familyName == null ? "" : familyName)).trim();
+        if (!splitName.isEmpty()) return splitName;
+
+        String email = jwt.getClaimAsString("email");
+        return email == null ? jwt.getSubject() : email;
     }
 
 }
