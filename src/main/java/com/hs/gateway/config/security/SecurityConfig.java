@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/news/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/me").authenticated()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/appointments/availability/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/storage/*/view-url").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/internal/**").denyAll()
                         .pathMatchers(API_V1_PREFIX + "/**").authenticated()
