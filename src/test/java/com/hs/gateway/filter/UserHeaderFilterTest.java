@@ -32,4 +32,10 @@ class UserHeaderFilterTest {
         assertThat(UserHeaderFilter.resolveDisplayName(splitName)).isEqualTo("Home Space");
         assertThat(UserHeaderFilter.resolveDisplayName(unnamed)).isEqualTo("admin@homespace.vn");
     }
+
+    @Test
+    void encodesDisplayNameAsUtf8Base64ForDownstreamHeaders() {
+        assertThat(UserHeaderFilter.encodeDisplayName("Tuấn Đào"))
+                .isEqualTo("VHXhuqVuIMSQw6Bv");
+    }
 }
