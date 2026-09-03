@@ -1,5 +1,8 @@
 package com.hs.gateway.filter;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -75,6 +78,7 @@ public class UserHeaderFilter implements GlobalFilter {
                 .header("X-User-Id", userId)
                 .header("X-User-Email", email)
                 .header("X-User-Name", name)
+                .header("X-User-Name-B64", encodeDisplayName(name))
                 .header("X-User-Role", role)
                 .header("X-User-Authorities", authorities)
                 .build();
@@ -92,6 +96,10 @@ public class UserHeaderFilter implements GlobalFilter {
 
         String email = jwt.getClaimAsString("email");
         return email == null ? jwt.getSubject() : email;
+    }
+
+    static String encodeDisplayName(String name) {
+        return Base64.getEncoder().encodeToString(name.getBytes(StandardCharsets.UTF_8));
     }
 
 }
