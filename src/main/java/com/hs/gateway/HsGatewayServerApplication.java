@@ -27,8 +27,11 @@ public class HsGatewayServerApplication {
 	private static final String CORE_SERVICE_ROUTE_ID = "core-service-route";
 	private static final String CORE_SERVICE_URI = "lb://hs-core-api";
 	private static final String CHAT_SERVICE_ROUTE_ID = "chat-service-route";
+	private static final String CHAT_SOCKET_ROUTE_ID = "chat-socket-route";
+	private static final String CHAT_WEBSOCKET_ROUTE_ID = "chat-websocket-route";
 	private static final String CHAT_SERVICE_PATH = API_V1_PREFIX + "/chat";
 	private static final String CHAT_SERVICE_URI = "lb://hs-chat-service";
+	private static final String CHAT_WEBSOCKET_URI = "lb:ws://hs-chat-service";
 	private static final String NEWS_SERVICE_ROUTE_ID = "news-service-route";
 	private static final String NEWS_SERVICE_DIAGNOSTICS_ROUTE_ID = "news-service-diagnostics-route";
 	private static final String NEWS_SERVICE_PATH = API_V1_PREFIX + "/news";
@@ -79,6 +82,20 @@ public class HsGatewayServerApplication {
 								"forward:/fallback/news-service",
 								circuitBreakerEnabled))
 						.uri(NEWS_SERVICE_URI))
+				.route(CHAT_WEBSOCKET_ROUTE_ID, r -> r
+						.path(CHAT_SERVICE_PATH + "/socket.io/**")
+						.and()
+						.header("Upgrade", "(?i)websocket")
+						.filters(f -> f.rewritePath(
+								CHAT_SERVICE_PATH + "/(?<segment>.*)",
+								"/${segment}"))
+						.uri(CHAT_WEBSOCKET_URI))
+				.route(CHAT_SOCKET_ROUTE_ID, r -> r
+						.path(CHAT_SERVICE_PATH + "/socket.io/**")
+						.filters(f -> f.rewritePath(
+								CHAT_SERVICE_PATH + "/(?<segment>.*)",
+								"/${segment}"))
+						.uri(CHAT_SERVICE_URI))
 				// Standalone Chat Service (must be declared before the core catch-all route)
 				.route(CHAT_SERVICE_ROUTE_ID, r -> r
 						.path(CHAT_SERVICE_PATH + "/**")

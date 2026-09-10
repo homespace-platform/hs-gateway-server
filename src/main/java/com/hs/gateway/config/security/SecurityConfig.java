@@ -35,6 +35,7 @@ public class SecurityConfig {
                         .pathMatchers(API_V1_PREFIX + "/actuator/prometheus").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/public/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/chat/ping").permitAll()
+                        .pathMatchers(API_V1_PREFIX + "/chat/socket.io/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/news/ping").permitAll()
                         // Didit webhook: no Keycloak JWT — core verifies HMAC X-Signature-V2
                         .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/webhooks/didit").permitAll()

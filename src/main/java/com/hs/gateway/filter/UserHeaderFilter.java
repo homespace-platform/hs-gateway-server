@@ -39,7 +39,8 @@ public class UserHeaderFilter implements GlobalFilter {
             ServerWebExchange exchange,
             GatewayFilterChain chain
     ) {
-        return exchange.getPrincipal()
+        ServerWebExchange sanitizedExchange = stripUserHeaders(exchange);
+        return sanitizedExchange.getPrincipal()
                 .filter(p -> p instanceof JwtAuthenticationToken)
                 .cast(JwtAuthenticationToken.class)
                 .flatMap(jwtAuth -> {
@@ -48,23 +49,37 @@ public class UserHeaderFilter implements GlobalFilter {
 
                     return userAccessResolver.resolve(jwtAuth)
                             .flatMap(access -> {
-                                if (!routeAuthorization.isAllowed(exchange, access.role())) {
-                                    return errorResponseWriter.write(exchange, ErrorCode.UNAUTHORIZED);
+                                if (!routeAuthorization.isAllowed(sanitizedExchange, access.role())) {
+                                    return errorResponseWriter.write(sanitizedExchange, ErrorCode.UNAUTHORIZED);
                                 }
 
                                 ServerHttpRequest mutatedRequest =
                                         mutateRequest(
-                                                exchange,
+                                                sanitizedExchange,
                                                 userId,
                                                 email,
                                                 resolveDisplayName(jwtAuth.getToken()),
                                                 access.role(),
                                                 access.authorities()
                                         );
-                                return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                                return chain.filter(sanitizedExchange.mutate().request(mutatedRequest).build());
                             });
                 })
-                .switchIfEmpty(chain.filter(exchange));
+                .switchIfEmpty(chain.filter(sanitizedExchange));
+    }
+
+    static ServerWebExchange stripUserHeaders(ServerWebExchange exchange) {
+        ServerHttpRequest request = exchange.getRequest().mutate()
+                .headers(headers -> {
+                    headers.remove("X-User-Id");
+                    headers.remove("X-User-Email");
+                    headers.remove("X-User-Name");
+                    headers.remove("X-User-Name-B64");
+                    headers.remove("X-User-Role");
+                    headers.remove("X-User-Authorities");
+                })
+                .build();
+        return exchange.mutate().request(request).build();
     }
 
     /**
