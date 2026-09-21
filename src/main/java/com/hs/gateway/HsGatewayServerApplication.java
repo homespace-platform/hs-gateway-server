@@ -124,6 +124,10 @@ public class HsGatewayServerApplication {
 								"forward:/fallback/user-service",
 								circuitBreakerEnabled))
 						.uri(CORE_SERVICE_URI))
+				// Mobile Proof Upload Route (Cross-device handoff without prefix stripping)
+				.route("mobile-proof-upload-route", r -> r
+						.path("/u/**")
+						.uri(CORE_SERVICE_URI))
 				.build();
 	}
 
