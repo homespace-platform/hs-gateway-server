@@ -120,8 +120,8 @@ public class HsGatewayServerApplication {
 								internalRateLimiterGatewayFilter,
 								CORE_SERVICE_ROUTE_ID,
 								API_V1_PREFIX,
-								"userServiceCircuitBreaker",
-								"forward:/fallback/user-service",
+								"coreServiceCircuitBreaker",
+								"forward:/fallback/core-service",
 								circuitBreakerEnabled))
 						.uri(CORE_SERVICE_URI))
 				// Mobile Proof Upload Route (Cross-device handoff without prefix stripping)
