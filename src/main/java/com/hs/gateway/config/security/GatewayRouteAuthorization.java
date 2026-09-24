@@ -2,6 +2,8 @@ package com.hs.gateway.config.security;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.cloud.gateway.route.Route;
+import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 
 @Component
 public class GatewayRouteAuthorization {
@@ -12,7 +14,9 @@ public class GatewayRouteAuthorization {
     public boolean isAllowed(ServerWebExchange exchange, String role) {
         String path = exchange.getRequest().getPath().pathWithinApplication().value();
 
-        if (path.matches(ADMIN_ROUTE_PATTERN)) {
+        Route matchedRoute = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
+        if (path.matches(ADMIN_ROUTE_PATTERN)
+                || (matchedRoute != null && "ai-service-admin-route".equals(matchedRoute.getId()))) {
             return ADMIN_ROLE.equals(role);
         }
 

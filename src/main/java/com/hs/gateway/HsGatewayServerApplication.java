@@ -38,6 +38,8 @@ public class HsGatewayServerApplication {
 	private static final String NEWS_SERVICE_URI = "lb://hs-news-service";
 	private static final String AI_SERVICE_ROUTE_ID = "ai-service-route";
 	private static final String AI_SERVICE_PATH = API_V1_PREFIX + "/ai";
+	private static final String AI_SERVICE_ADMIN_ROUTE_ID = "ai-service-admin-route";
+	private static final String AI_SERVICE_ADMIN_PATH = API_V1_PREFIX + "/admin/ai";
 	private static final String AI_SERVICE_URI = "lb://hs-ai-service";
 
 	public static void main(String[] args) {
@@ -113,6 +115,23 @@ public class HsGatewayServerApplication {
 								"forward:/fallback/chat-service",
 									circuitBreakerEnabled))
 						.uri(CHAT_SERVICE_URI))
+				// HomeSpace AI Admin Service (must be declared before the core catch-all route; protected by GatewayRouteAuthorization for ADMIN)
+				.route(AI_SERVICE_ADMIN_ROUTE_ID, r -> r
+						.path(AI_SERVICE_ADMIN_PATH + "/**")
+						.filters(f -> {
+							GatewayFilterSpec spec = f
+									.rewritePath(AI_SERVICE_ADMIN_PATH + "/(?<segment>.*)", "/admin/${segment}")
+									.filter(internalRateLimiterGatewayFilter.apply(AI_SERVICE_ADMIN_ROUTE_ID, defaultRateLimiter, ipKeyResolver));
+							if (!circuitBreakerEnabled) return spec;
+							return spec.circuitBreaker(c -> c
+									.setName("aiServiceCircuitBreaker")
+									.setFallbackUri("forward:/fallback/ai-service")
+									.addStatusCode("500")
+									.addStatusCode("502")
+									.addStatusCode("503")
+									.addStatusCode("504"));
+						})
+						.uri(AI_SERVICE_URI))
 				// HomeSpace AI Service (keep before the core catch-all route)
 				.route(AI_SERVICE_ROUTE_ID, r -> r
 						.path(AI_SERVICE_PATH + "/**")

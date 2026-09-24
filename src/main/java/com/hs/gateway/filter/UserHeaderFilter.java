@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.cloud.gateway.route.Route;
+import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -18,6 +20,8 @@ import com.hs.gateway.config.security.UserAccessResolver;
 import com.hs.gateway.advice.entity.enums.ErrorCode;
 import com.hs.gateway.dto.GatewayErrorResponseWriter;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import reactor.core.publisher.Mono;
 
 @Component
@@ -27,6 +31,9 @@ public class UserHeaderFilter implements GlobalFilter {
     private final UserAccessResolver userAccessResolver;
     private final GatewayRouteAuthorization routeAuthorization;
     private final GatewayErrorResponseWriter errorResponseWriter;
+
+    @Value("${GATEWAY_INTERNAL_SECRET:}")
+    private String gatewayInternalSecret;
 
     /**
      * Filter chính của Gateway.
@@ -77,6 +84,7 @@ public class UserHeaderFilter implements GlobalFilter {
                     headers.remove("X-User-Name-B64");
                     headers.remove("X-User-Role");
                     headers.remove("X-User-Authorities");
+                    headers.remove("X-Internal-Secret");
                 })
                 .build();
         return exchange.mutate().request(request).build();
@@ -89,7 +97,7 @@ public class UserHeaderFilter implements GlobalFilter {
             ServerWebExchange exchange, String userId,
             String email, String name, String role, String authorities
     ) {
-        return exchange.getRequest().mutate()
+        ServerHttpRequest request = exchange.getRequest().mutate()
                 .header("X-User-Id", userId)
                 .header("X-User-Email", email)
                 .header("X-User-Name", name)
@@ -97,6 +105,15 @@ public class UserHeaderFilter implements GlobalFilter {
                 .header("X-User-Role", role)
                 .header("X-User-Authorities", authorities)
                 .build();
+        Route matchedRoute = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
+        boolean isAiRoute = matchedRoute != null
+                && ("ai-service-route".equals(matchedRoute.getId())
+                || "ai-service-admin-route".equals(matchedRoute.getId()));
+        if (isAiRoute
+                && gatewayInternalSecret != null && !gatewayInternalSecret.isBlank()) {
+            return request.mutate().header("X-Internal-Secret", gatewayInternalSecret).build();
+        }
+        return request;
     }
 
     static String resolveDisplayName(Jwt jwt) {
