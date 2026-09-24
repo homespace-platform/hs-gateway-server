@@ -36,6 +36,9 @@ public class HsGatewayServerApplication {
 	private static final String NEWS_SERVICE_DIAGNOSTICS_ROUTE_ID = "news-service-diagnostics-route";
 	private static final String NEWS_SERVICE_PATH = API_V1_PREFIX + "/news";
 	private static final String NEWS_SERVICE_URI = "lb://hs-news-service";
+	private static final String AI_SERVICE_ROUTE_ID = "ai-service-route";
+	private static final String AI_SERVICE_PATH = API_V1_PREFIX + "/ai";
+	private static final String AI_SERVICE_URI = "lb://hs-ai-service";
 
 	public static void main(String[] args) {
 		SpringApplication.run(HsGatewayServerApplication.class, args);
@@ -108,8 +111,22 @@ public class HsGatewayServerApplication {
 								CHAT_SERVICE_PATH,
 								"chatServiceCircuitBreaker",
 								"forward:/fallback/chat-service",
-								circuitBreakerEnabled))
+									circuitBreakerEnabled))
 						.uri(CHAT_SERVICE_URI))
+				// HomeSpace AI Service (keep before the core catch-all route)
+				.route(AI_SERVICE_ROUTE_ID, r -> r
+						.path(AI_SERVICE_PATH + "/**")
+						.filters(f -> commonFilters(
+								f,
+								defaultRateLimiter,
+								ipKeyResolver,
+								internalRateLimiterGatewayFilter,
+								AI_SERVICE_ROUTE_ID,
+								AI_SERVICE_PATH,
+								"aiServiceCircuitBreaker",
+								"forward:/fallback/ai-service",
+								circuitBreakerEnabled))
+						.uri(AI_SERVICE_URI))
 				// Modular Monolith Core Service
 				.route(CORE_SERVICE_ROUTE_ID, r -> r
 						.path(API_V1_PREFIX + "/**")
