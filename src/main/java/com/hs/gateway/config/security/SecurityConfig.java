@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .pathMatchers(API_V1_PREFIX + "/chat/socket.io/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/news/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/ping").permitAll()
+                        .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/ai/property-search").permitAll()
+                        .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/property-search/suggestions").permitAll()
                         // Didit webhook: no Keycloak JWT — core verifies HMAC X-Signature-V2
                         .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/webhooks/didit").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/me").authenticated()
