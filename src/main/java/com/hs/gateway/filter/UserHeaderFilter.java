@@ -46,11 +46,11 @@ public class UserHeaderFilter implements GlobalFilter {
             ServerWebExchange exchange,
             GatewayFilterChain chain
     ) {
-        ServerWebExchange sanitizedExchange = stripUserHeaders(exchange);
+        ServerWebExchange sanitizedExchange = trustAiRequest(stripUserHeaders(exchange));
         return sanitizedExchange.getPrincipal()
                 .filter(p -> p instanceof JwtAuthenticationToken)
                 .cast(JwtAuthenticationToken.class)
-                .flatMap(jwtAuth -> {
+                .map(jwtAuth -> {
                     String userId = jwtAuth.getToken().getSubject();
                     String email = jwtAuth.getToken().getClaim("email");
 
@@ -72,7 +72,26 @@ public class UserHeaderFilter implements GlobalFilter {
                                 return chain.filter(sanitizedExchange.mutate().request(mutatedRequest).build());
                             });
                 })
-                .switchIfEmpty(chain.filter(sanitizedExchange));
+                // Choose the branch before subscribing to its Mono<Void>; otherwise
+                // a successful authenticated chain also looks empty and runs twice.
+                .defaultIfEmpty(Mono.defer(() -> chain.filter(sanitizedExchange)))
+                .flatMap(result -> result);
+    }
+
+    ServerWebExchange trustAiRequest(ServerWebExchange exchange) {
+        Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
+        if (route == null || !("ai-service-route".equals(route.getId())
+                || "ai-service-admin-route".equals(route.getId()))) return exchange;
+        var remote = exchange.getRequest().getRemoteAddress();
+        String peer = remote == null || remote.getAddress() == null
+                ? "unknown" : remote.getAddress().getHostAddress();
+        var request = exchange.getRequest().mutate().headers(headers -> {
+            headers.set("X-Ai-Client-IP", peer);
+            if (gatewayInternalSecret != null && !gatewayInternalSecret.isBlank()) {
+                headers.set("X-Internal-Secret", gatewayInternalSecret);
+            }
+        }).build();
+        return exchange.mutate().request(request).build();
     }
 
     static ServerWebExchange stripUserHeaders(ServerWebExchange exchange) {
@@ -85,6 +104,7 @@ public class UserHeaderFilter implements GlobalFilter {
                     headers.remove("X-User-Role");
                     headers.remove("X-User-Authorities");
                     headers.remove("X-Internal-Secret");
+                    headers.remove("X-Ai-Client-IP");
                 })
                 .build();
         return exchange.mutate().request(request).build();
