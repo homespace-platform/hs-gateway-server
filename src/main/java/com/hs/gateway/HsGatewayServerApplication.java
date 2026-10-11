@@ -13,6 +13,7 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.cloud.gateway.route.builder.GatewayFilterSpec;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 
 import com.hs.gateway.filter.InternalRateLimiterGatewayFilter;
@@ -146,6 +147,20 @@ public class HsGatewayServerApplication {
 								"forward:/fallback/ai-service",
 								circuitBreakerEnabled))
 						.uri(AI_SERVICE_URI))
+				// PDF generation includes storage and LibreOffice I/O. Keep its budget
+				// isolated from ordinary Core requests (and their circuit breaker).
+				.route("contract-preview-route", r -> r
+						.path(API_V1_PREFIX + "/contracts/*/previews")
+						.and().method(HttpMethod.POST)
+						.filters(f -> {
+							GatewayFilterSpec spec = f.rewritePath(API_V1_PREFIX + "/(?<segment>.*)", "/${segment}")
+									.filter(internalRateLimiterGatewayFilter.apply("contract-preview-route", defaultRateLimiter, ipKeyResolver));
+							// Preserve actual Core validation/render errors; only transport failures fall back.
+							return circuitBreakerEnabled ? spec.circuitBreaker(c -> c
+									.setName("contractPreviewCircuitBreaker")
+									.setFallbackUri("forward:/fallback/contract-preview")) : spec;
+						})
+						.uri(CORE_SERVICE_URI))
 				// Modular Monolith Core Service
 				.route(CORE_SERVICE_ROUTE_ID, r -> r
 						.path(API_V1_PREFIX + "/**")
