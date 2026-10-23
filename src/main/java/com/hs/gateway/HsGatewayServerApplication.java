@@ -161,6 +161,19 @@ public class HsGatewayServerApplication {
 									.setFallbackUri("forward:/fallback/contract-preview")) : spec;
 						})
 						.uri(CORE_SERVICE_URI))
+				// Nearby-amenity comparison fans out to the map provider (several pages per listing), so it needs a
+				// longer budget than the 6 s default of ordinary Core requests. Keep it before the core catch-all.
+				.route("surroundings-compare-route", r -> r
+						.path(API_V1_PREFIX + "/listings/ai/surroundings/**")
+						.filters(f -> {
+							GatewayFilterSpec spec = f.rewritePath(API_V1_PREFIX + "/(?<segment>.*)", "/${segment}")
+									.filter(internalRateLimiterGatewayFilter.apply("surroundings-compare-route", defaultRateLimiter, ipKeyResolver));
+							// Only transport failures fall back; Core's own 4xx/429 answers pass through unchanged.
+							return circuitBreakerEnabled ? spec.circuitBreaker(c -> c
+									.setName("surroundingsCircuitBreaker")
+									.setFallbackUri("forward:/fallback/core-service")) : spec;
+						})
+						.uri(CORE_SERVICE_URI))
 				// Modular Monolith Core Service
 				.route(CORE_SERVICE_ROUTE_ID, r -> r
 						.path(API_V1_PREFIX + "/**")
