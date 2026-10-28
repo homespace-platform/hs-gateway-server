@@ -38,6 +38,11 @@ class GuestSecurityTest {
             client.get().uri("/api/v1/ai/guest/agent/conversations").exchange().expectStatus().isOk();
             client.post().uri("/api/v1/ai/guest/agent/ask").exchange().expectStatus().isOk();
             client.post().uri("/api/v1/public/listings/ai/search").exchange().expectStatus().isOk();
+            client.post().uri("/api/v1/public/listings/ai/nearby-summary").exchange().expectStatus().isOk();
+            client.get().uri("/api/v1/public/listings/room/nearby-places").exchange().expectStatus().isOk();
+            client.get().uri("/api/v1/public/listings/ai/nearby-places/search?keyword=school").exchange().expectStatus().isOk();
+            client.get().uri("/api/v1/admin/nearby-scans").exchange().expectStatus().isUnauthorized();
+            client.post().uri("/api/v1/admin/listings/room/nearby-scans").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/ai/agent/conversations").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/ai/agent/ask").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/admin/ai/knowledge/documents").exchange().expectStatus().isUnauthorized();
