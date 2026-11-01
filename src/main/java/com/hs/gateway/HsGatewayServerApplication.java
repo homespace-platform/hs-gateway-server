@@ -203,7 +203,6 @@ public class HsGatewayServerApplication {
 		return spec.circuitBreaker(c -> c
 				.setName(circuitBreakerName)
 				.setFallbackUri(fallbackUri)
-				.addStatusCode("500")
 				.addStatusCode("502")
 				.addStatusCode("503")
 				.addStatusCode("504"));
