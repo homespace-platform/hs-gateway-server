@@ -37,6 +37,9 @@ public class HsGatewayServerApplication {
 	private static final String NEWS_SERVICE_DIAGNOSTICS_ROUTE_ID = "news-service-diagnostics-route";
 	private static final String NEWS_SERVICE_PATH = API_V1_PREFIX + "/news";
 	private static final String NEWS_SERVICE_URI = "lb://hs-news-service";
+	private static final String NOTIFICATION_SERVICE_ROUTE_ID = "notification-service-route";
+	private static final String NOTIFICATION_SERVICE_PATH = API_V1_PREFIX + "/notifications";
+	private static final String NOTIFICATION_SERVICE_URI = "lb://hs-notification-service";
 	private static final String AI_SERVICE_ROUTE_ID = "ai-service-route";
 	private static final String AI_SERVICE_PATH = API_V1_PREFIX + "/ai";
 	private static final String AI_SERVICE_ADMIN_ROUTE_ID = "ai-service-admin-route";
@@ -88,6 +91,20 @@ public class HsGatewayServerApplication {
 								"forward:/fallback/news-service",
 								circuitBreakerEnabled))
 						.uri(NEWS_SERVICE_URI))
+				// Standalone Notification Service (must be declared before the core catch-all route)
+				.route(NOTIFICATION_SERVICE_ROUTE_ID, r -> r
+						.path(NOTIFICATION_SERVICE_PATH + "/**")
+						.filters(f -> commonFilters(
+								f,
+								defaultRateLimiter,
+								ipKeyResolver,
+								internalRateLimiterGatewayFilter,
+								NOTIFICATION_SERVICE_ROUTE_ID,
+								NOTIFICATION_SERVICE_PATH,
+								"notificationServiceCircuitBreaker",
+								"forward:/fallback/notification-service",
+								circuitBreakerEnabled))
+						.uri(NOTIFICATION_SERVICE_URI))
 				.route(CHAT_WEBSOCKET_ROUTE_ID, r -> r
 						.path(CHAT_SERVICE_PATH + "/socket.io/**")
 						.and()
