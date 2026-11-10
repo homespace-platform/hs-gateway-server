@@ -36,12 +36,11 @@ class GuestSecurityTest {
             var client = WebTestClient.bindToWebHandler(exchange -> exchange.getResponse().setComplete())
                     .webFilter(context.getBean(WebFilterChainProxy.class)).build();
             client.get().uri("/api/v1/ai/guest/agent/conversations").exchange().expectStatus().isOk();
-            client.get().uri("/api/v1/membership/vnpay/ipn").exchange().expectStatus().isOk();
             client.post().uri("/api/v1/membership/sepay/ipn").exchange().expectStatus().isOk();
             client.get().uri("/api/v1/membership/sepay/ipn").exchange().expectStatus().isUnauthorized();
+            client.get().uri("/api/v1/membership/vnpay/ipn").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/membership/me").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/membership/checkout").exchange().expectStatus().isUnauthorized();
-            client.post().uri("/api/v1/membership/vnpay/ipn").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/ai/guest/agent/ask").exchange().expectStatus().isOk();
             client.post().uri("/api/v1/public/listings/ai/search").exchange().expectStatus().isOk();
             client.post().uri("/api/v1/public/listings/ai/nearby-summary").exchange().expectStatus().isOk();
