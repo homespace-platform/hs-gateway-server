@@ -45,6 +45,10 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/property-search/suggestions").permitAll()
                         // Didit webhook: no Keycloak JWT — core verifies HMAC X-Signature-V2
                         .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/webhooks/didit").permitAll()
+                        // VNPAY calls this endpoint without a JWT; core validates its signed payload.
+                        .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/membership/vnpay/ipn").permitAll()
+                        // SePay signs the server-to-server notification with its configured IPN secret.
+                        .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/membership/sepay/ipn").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/me").authenticated()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/appointments/availability/**").permitAll()
