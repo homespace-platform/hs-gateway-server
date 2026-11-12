@@ -84,6 +84,92 @@ class UserHeaderFilterTest {
     }
 
     @Test
+    void authenticatedNotificationRequestGetsUserIdentityAndGatewaySecretOnce() {
+        var resolver = mock(UserAccessResolver.class);
+        var filter = new UserHeaderFilter(resolver, new GatewayRouteAuthorization(),
+                mock(GatewayErrorResponseWriter.class));
+        ReflectionTestUtils.setField(filter, "gatewayInternalSecret", "test-only-internal-gateway-secret-32");
+        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("keycloak-user-1")
+                .claim("email", "tenant@example.test").claim("name", "Tenant").build();
+        var auth = new JwtAuthenticationToken(jwt);
+        when(resolver.resolve(auth)).thenReturn(Mono.just(new UserAccess("USER", "ROLE_USER")));
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/notifications/feed")
+                        .header("X-User-Id", "forged-user").header("X-Internal-Secret", "forged"))
+                .mutate().principal(Mono.just(auth)).build();
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR,
+                Route.async().id("notification-service-route").uri("http://localhost:8085").predicate(e -> true).build());
+        var calls = new AtomicInteger();
+        filter.filter(exchange, forwarded -> {
+            calls.incrementAndGet();
+            var headers = forwarded.getRequest().getHeaders();
+            assertThat(headers.get("X-User-Id")).containsExactly("keycloak-user-1");
+            assertThat(headers.get("X-Internal-Secret")).containsExactly("test-only-internal-gateway-secret-32");
+            assertThat(headers.getFirst("X-Ai-Client-IP")).isNull();
+            return Mono.empty();
+        }).block();
+        assertThat(calls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void anonymousNotificationRequestNeverCarriesForgedIdentityOrClientSecret() {
+        var filter = new UserHeaderFilter(mock(UserAccessResolver.class), new GatewayRouteAuthorization(),
+                mock(GatewayErrorResponseWriter.class));
+        ReflectionTestUtils.setField(filter, "gatewayInternalSecret", "test-only-internal-gateway-secret-32");
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/notifications/feed")
+                .header("X-User-Id", "victim").header("X-User-Role", "ADMIN")
+                .header("X-Internal-Secret", "forged"));
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR,
+                Route.async().id("notification-service-route").uri("http://localhost:8085").predicate(e -> true).build());
+        var calls = new AtomicInteger();
+        filter.filter(exchange, forwarded -> {
+            calls.incrementAndGet();
+            var headers = forwarded.getRequest().getHeaders();
+            assertThat(headers.getFirst("X-User-Id")).isNull();
+            assertThat(headers.getFirst("X-User-Role")).isNull();
+            assertThat(headers.get("X-Internal-Secret")).doesNotContain("forged");
+            return Mono.empty();
+        }).block();
+        assertThat(calls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void notificationRouteDoesNotForwardAnyClientSecretWhenGatewaySecretIsUnset() {
+        var filter = new UserHeaderFilter(mock(UserAccessResolver.class), new GatewayRouteAuthorization(),
+                mock(GatewayErrorResponseWriter.class));
+        ReflectionTestUtils.setField(filter, "gatewayInternalSecret", "");
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/notifications/feed")
+                .header("X-Internal-Secret", "forged"));
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR,
+                Route.async().id("notification-service-route").uri("http://localhost:8085").predicate(e -> true).build());
+        filter.filter(exchange, forwarded -> {
+            assertThat(forwarded.getRequest().getHeaders().getFirst("X-Internal-Secret")).isNull();
+            return Mono.empty();
+        }).block();
+    }
+
+    @Test
+    void secretIsNotInjectedForOtherServices() {
+        var resolver = mock(UserAccessResolver.class);
+        var filter = new UserHeaderFilter(resolver, new GatewayRouteAuthorization(),
+                mock(GatewayErrorResponseWriter.class));
+        ReflectionTestUtils.setField(filter, "gatewayInternalSecret", "test-only-internal-gateway-secret-32");
+        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("keycloak-user-1")
+                .claim("email", "tenant@example.test").claim("name", "Tenant").build();
+        var auth = new JwtAuthenticationToken(jwt);
+        when(resolver.resolve(auth)).thenReturn(Mono.just(new UserAccess("USER", "ROLE_USER")));
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/listings/me")
+                        .header("X-Internal-Secret", "forged"))
+                .mutate().principal(Mono.just(auth)).build();
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR,
+                Route.async().id("core-service-route").uri("http://localhost:8081").predicate(e -> true).build());
+        filter.filter(exchange, forwarded -> {
+            assertThat(forwarded.getRequest().getHeaders().getFirst("X-Internal-Secret")).isNull();
+            assertThat(forwarded.getRequest().getHeaders().getFirst("X-User-Id")).isEqualTo("keycloak-user-1");
+            return Mono.empty();
+        }).block();
+    }
+
+    @Test
     void resolvesDisplayNameWithEmailFallback() {
         Jwt named = Jwt.withTokenValue("token")
                 .header("alg", "none")

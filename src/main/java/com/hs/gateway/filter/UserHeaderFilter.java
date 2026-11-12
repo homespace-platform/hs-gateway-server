@@ -80,18 +80,29 @@ public class UserHeaderFilter implements GlobalFilter {
 
     ServerWebExchange trustAiRequest(ServerWebExchange exchange) {
         Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
-        if (route == null || !("ai-service-route".equals(route.getId())
-                || "ai-service-admin-route".equals(route.getId()))) return exchange;
+        if (!usesGatewayInternalSecret(route)) return exchange;
         var remote = exchange.getRequest().getRemoteAddress();
         String peer = remote == null || remote.getAddress() == null
                 ? "unknown" : remote.getAddress().getHostAddress();
         var request = exchange.getRequest().mutate().headers(headers -> {
-            headers.set("X-Ai-Client-IP", peer);
+            if (route.getId().startsWith("ai-service-")) headers.set("X-Ai-Client-IP", peer);
             if (gatewayInternalSecret != null && !gatewayInternalSecret.isBlank()) {
                 headers.set("X-Internal-Secret", gatewayInternalSecret);
             }
         }).build();
         return exchange.mutate().request(request).build();
+    }
+
+    /**
+     * Routes whose downstream service refuses X-User-* identity headers unless the request
+     * carries the shared gateway secret. The inbound X-Internal-Secret is always stripped first.
+     */
+    static boolean usesGatewayInternalSecret(Route route) {
+        if (route == null) return false;
+        return switch (route.getId()) {
+            case "ai-service-route", "ai-service-admin-route", "notification-service-route" -> true;
+            default -> false;
+        };
     }
 
     static ServerWebExchange stripUserHeaders(ServerWebExchange exchange) {
@@ -126,10 +137,7 @@ public class UserHeaderFilter implements GlobalFilter {
                 .header("X-User-Authorities", authorities)
                 .build();
         Route matchedRoute = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
-        boolean isAiRoute = matchedRoute != null
-                && ("ai-service-route".equals(matchedRoute.getId())
-                || "ai-service-admin-route".equals(matchedRoute.getId()));
-        if (isAiRoute
+        if (usesGatewayInternalSecret(matchedRoute)
                 && gatewayInternalSecret != null && !gatewayInternalSecret.isBlank()) {
             return request.mutate().header("X-Internal-Secret", gatewayInternalSecret).build();
         }
