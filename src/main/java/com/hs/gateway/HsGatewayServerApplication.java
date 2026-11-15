@@ -40,6 +40,7 @@ public class HsGatewayServerApplication {
 	private static final String NOTIFICATION_SERVICE_ROUTE_ID = "notification-service-route";
 	private static final String NOTIFICATION_SERVICE_PATH = API_V1_PREFIX + "/notifications";
 	private static final String NOTIFICATION_SERVICE_URI = "lb://hs-notification-service";
+	private static final String NOTIFICATION_BROADCAST_ROUTE_ID = "notification-broadcast-route";
 	private static final String AI_SERVICE_ROUTE_ID = "ai-service-route";
 	private static final String AI_SERVICE_PATH = API_V1_PREFIX + "/ai";
 	private static final String AI_SERVICE_ADMIN_ROUTE_ID = "ai-service-admin-route";
@@ -91,6 +92,15 @@ public class HsGatewayServerApplication {
 								"forward:/fallback/news-service",
 								circuitBreakerEnabled))
 						.uri(NEWS_SERVICE_URI))
+				// Core queues recipient selection; notification-service only delivers Kafka events.
+				.route(NOTIFICATION_BROADCAST_ROUTE_ID, r -> r
+						.path(NOTIFICATION_SERVICE_PATH + "/admin/broadcast")
+						.and().method(HttpMethod.POST)
+						.filters(f -> commonFilters(f, defaultRateLimiter, ipKeyResolver,
+								internalRateLimiterGatewayFilter, NOTIFICATION_BROADCAST_ROUTE_ID,
+								API_V1_PREFIX, "coreServiceCircuitBreaker", "forward:/fallback/core-service",
+								circuitBreakerEnabled))
+						.uri(CORE_SERVICE_URI))
 				// Standalone Notification Service (must be declared before the core catch-all route)
 				.route(NOTIFICATION_SERVICE_ROUTE_ID, r -> r
 						.path(NOTIFICATION_SERVICE_PATH + "/**")

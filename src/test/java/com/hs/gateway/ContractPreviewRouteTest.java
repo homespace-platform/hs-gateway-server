@@ -53,6 +53,16 @@ class ContractPreviewRouteTest {
             assertEquals("contract-preview-route", firstMatch(routes, HttpMethod.POST, "/api/v1/contracts/c1/previews").getId());
             assertEquals("core-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/contracts/c1/preview-status").getId());
             assertEquals("core-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/contracts/c1/previews").getId());
+            var broadcast = firstMatch(routes, HttpMethod.POST, "/api/v1/notifications/admin/broadcast");
+            assertEquals("notification-broadcast-route", broadcast.getId());
+            assertEquals("lb://hs-core-api", broadcast.getUri().toString());
+            var exchange = MockServerWebExchange.from(MockServerHttpRequest.post("/api/v1/notifications/admin/broadcast"));
+            broadcast.getFilters().getFirst().filter(exchange, forwarded -> {
+                assertEquals("/notifications/admin/broadcast", forwarded.getRequest().getURI().getPath());
+                return Mono.empty();
+            }).block();
+            assertEquals("notification-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/notifications/feed").getId());
+            assertEquals("lb://hs-notification-service", firstMatch(routes, HttpMethod.GET, "/api/v1/notifications/feed").getUri().toString());
             assertTrue(configs.get("contractPreviewCircuitBreaker").getStatusCodes().isEmpty());
             assertFalse(configs.get("coreServiceCircuitBreaker").getStatusCodes().isEmpty());
             var properties = new Properties();

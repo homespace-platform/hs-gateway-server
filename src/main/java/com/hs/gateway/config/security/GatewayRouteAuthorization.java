@@ -16,7 +16,9 @@ public class GatewayRouteAuthorization {
 
         Route matchedRoute = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
         if (path.matches(ADMIN_ROUTE_PATTERN)
-                || (matchedRoute != null && "ai-service-admin-route".equals(matchedRoute.getId()))) {
+                || path.equals("/api/v1/notifications/admin/broadcast")
+                || (matchedRoute != null && ("ai-service-admin-route".equals(matchedRoute.getId())
+                    || "notification-broadcast-route".equals(matchedRoute.getId())))) {
             return ADMIN_ROLE.equals(role);
         }
 
