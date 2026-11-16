@@ -188,6 +188,18 @@ public class HsGatewayServerApplication {
 									.setFallbackUri("forward:/fallback/contract-preview")) : spec;
 						})
 						.uri(CORE_SERVICE_URI))
+                // VNPT capture calls have a bounded upstream budget independent of normal Core traffic.
+                .route("vnpt-ekyc-route", r -> r
+                        .path(API_V1_PREFIX + "/users/me/kyc/vnpt/sessions/*/sdk/**")
+                        .and().method(HttpMethod.POST)
+                        .filters(f -> {
+                            GatewayFilterSpec spec = f.rewritePath(API_V1_PREFIX + "/(?<segment>.*)", "/${segment}")
+                                    .filter(internalRateLimiterGatewayFilter.apply("vnpt-ekyc-route", defaultRateLimiter, ipKeyResolver));
+                            return circuitBreakerEnabled ? spec.circuitBreaker(c -> c
+                                    .setName("vnptEkycCircuitBreaker")
+                                    .setFallbackUri("forward:/fallback/core-service")) : spec;
+                        })
+                        .uri(CORE_SERVICE_URI))
 				// Modular Monolith Core Service
 				.route(CORE_SERVICE_ROUTE_ID, r -> r
 						.path(API_V1_PREFIX + "/**")

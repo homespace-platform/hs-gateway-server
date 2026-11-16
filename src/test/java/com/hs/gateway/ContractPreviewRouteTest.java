@@ -63,10 +63,21 @@ class ContractPreviewRouteTest {
             }).block();
             assertEquals("notification-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/notifications/feed").getId());
             assertEquals("lb://hs-notification-service", firstMatch(routes, HttpMethod.GET, "/api/v1/notifications/feed").getUri().toString());
+            var capture = firstMatch(routes, HttpMethod.POST, "/api/v1/users/me/kyc/vnpt/sessions/attempt/sdk/face");
+            assertEquals("vnpt-ekyc-route", capture.getId());
+            assertEquals("lb://hs-core-api", capture.getUri().toString());
+            var captureExchange = MockServerWebExchange.from(MockServerHttpRequest.post("/api/v1/users/me/kyc/vnpt/sessions/attempt/sdk/upload"));
+            capture.getFilters().getFirst().filter(captureExchange, forwarded -> {
+                assertEquals("/users/me/kyc/vnpt/sessions/attempt/sdk/upload", forwarded.getRequest().getURI().getPath());
+                return Mono.empty();
+            }).block();
+            assertEquals("core-service-route", firstMatch(routes, HttpMethod.POST, "/api/v1/users/me/kyc/session").getId());
+            assertTrue(configs.get("vnptEkycCircuitBreaker").getStatusCodes().isEmpty());
             assertTrue(configs.get("contractPreviewCircuitBreaker").getStatusCodes().isEmpty());
             assertFalse(configs.get("coreServiceCircuitBreaker").getStatusCodes().isEmpty());
             var properties = new Properties();
             try (var stream = getClass().getResourceAsStream("/application.properties")) { properties.load(stream); }
+            assertEquals("50s", properties.getProperty("resilience4j.timelimiter.instances.vnptEkycCircuitBreaker.timeout-duration"));
             assertEquals("90s", properties.getProperty("resilience4j.timelimiter.instances.contractPreviewCircuitBreaker.timeout-duration"));
             assertEquals("6s", properties.getProperty("resilience4j.timelimiter.configs.default.timeout-duration"));
         }

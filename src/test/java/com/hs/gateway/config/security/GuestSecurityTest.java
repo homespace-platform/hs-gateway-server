@@ -37,12 +37,17 @@ class GuestSecurityTest {
                     .webFilter(context.getBean(WebFilterChainProxy.class)).build();
             client.get().uri("/api/v1/ai/guest/agent/conversations").exchange().expectStatus().isOk();
             client.post().uri("/api/v1/membership/sepay/ipn").exchange().expectStatus().isOk();
+            client.post().uri("/api/v1/webhooks/didit").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/membership/sepay/ipn").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/membership/vnpay/ipn").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/membership/me").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/internal/notification-recipients").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/internal/notification-recipients").exchange().expectStatus().isUnauthorized();
             client.get().uri("/api/v1/internal/users/example/permissions").exchange().expectStatus().isUnauthorized();
+            client.post().uri("/api/v1/users/me/kyc/vnpt/session").exchange().expectStatus().isUnauthorized();
+            client.post().uri("/api/v1/users/me/kyc/vnpt/sessions/attempt/sdk/upload").exchange().expectStatus().isUnauthorized();
+            client.post().uri("/api/v1/users/me/kyc/vnpt/sessions/attempt/sdk/face").exchange().expectStatus().isUnauthorized();
+            client.post().uri("/api/v1/users/me/kyc/vnpt/sessions/attempt/finalize").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/notifications/admin/broadcast").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/membership/checkout").exchange().expectStatus().isUnauthorized();
             client.post().uri("/api/v1/ai/guest/agent/ask").exchange().expectStatus().isOk();

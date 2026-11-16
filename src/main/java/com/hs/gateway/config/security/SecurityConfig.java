@@ -43,8 +43,6 @@ public class SecurityConfig {
                         .pathMatchers(API_V1_PREFIX + "/ai/guest/agent/**").permitAll()
                         .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/ai/property-search").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/property-search/suggestions").permitAll()
-                        // Didit webhook: no Keycloak JWT — core verifies HMAC X-Signature-V2
-                        .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/webhooks/didit").permitAll()
                         // SePay signs the server-to-server notification with its configured IPN secret.
                         .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/membership/sepay/ipn").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/listings/me").authenticated()
