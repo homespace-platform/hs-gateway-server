@@ -102,6 +102,11 @@ public class HsGatewayServerApplication {
 								circuitBreakerEnabled))
 						.uri(CORE_SERVICE_URI))
 				// Standalone Notification Service (must be declared before the core catch-all route)
+				.route("notification-websocket-route", r -> r
+						.path(NOTIFICATION_SERVICE_PATH + "/socket.io/**")
+						.and().header("Upgrade", "(?i)websocket")
+						.filters(f -> f.rewritePath(NOTIFICATION_SERVICE_PATH + "/(?<segment>.*)", "/${segment}"))
+						.uri("lb:ws://hs-notification-service"))
 				.route(NOTIFICATION_SERVICE_ROUTE_ID, r -> r
 						.path(NOTIFICATION_SERVICE_PATH + "/**")
 						.filters(f -> commonFilters(

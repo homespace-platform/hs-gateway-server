@@ -74,6 +74,13 @@ class ContractPreviewRouteTest {
             }).block();
             assertEquals("notification-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/notifications/feed").getId());
             assertEquals("lb://hs-notification-service", firstMatch(routes, HttpMethod.GET, "/api/v1/notifications/feed").getUri().toString());
+            var handshake=MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/notifications/socket.io/?EIO=4&transport=websocket").header("Upgrade","websocket"));
+            var socket=routes.stream().filter(route->Boolean.TRUE.equals(Mono.from(route.getPredicate().apply(handshake)).block())).findFirst().orElseThrow();
+            assertEquals("notification-websocket-route",socket.getId());
+            assertEquals("lb:ws://hs-notification-service",socket.getUri().toString());
+            socket.getFilters().getFirst().filter(handshake,forwarded->{
+                assertEquals("/socket.io/",forwarded.getRequest().getURI().getPath());return Mono.empty();
+            }).block();
             var capture = firstMatch(routes, HttpMethod.POST, "/api/v1/users/me/kyc/vnpt/sessions/attempt/sdk/face");
             assertEquals("vnpt-ekyc-route", capture.getId());
             assertEquals("lb://hs-core-api", capture.getUri().toString());

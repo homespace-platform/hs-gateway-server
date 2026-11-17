@@ -41,6 +41,8 @@ public class SecurityConfig {
                         .pathMatchers(API_V1_PREFIX + "/public/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/chat/ping").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/chat/socket.io/**").permitAll()
+                        // Socket namespace authenticates the JWT in its handshake, as the chat socket does.
+                        .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/notifications/socket.io/**").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/news/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/notifications/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/ping").permitAll()

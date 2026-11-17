@@ -15,6 +15,16 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
 class GuestSecurityTest {
+    @Test void notificationHandshakeDoesNotExposeTheRestFeed() {
+        try(var context=new AnnotationConfigApplicationContext(TestConfiguration.class)) {
+            var client=WebTestClient.bindToWebHandler(exchange->exchange.getResponse().setComplete())
+                    .webFilter(context.getBean(WebFilterChainProxy.class)).build();
+            client.get().uri("/api/v1/notifications/socket.io/?EIO=4&transport=websocket").exchange().expectStatus().isOk();
+            client.post().uri("/api/v1/notifications/socket.io/").exchange().expectStatus().isUnauthorized();
+            client.get().uri("/api/v1/notifications/feed").exchange().expectStatus().isUnauthorized();
+            client.get().uri("/api/v1/admin/operational-incidents").exchange().expectStatus().isUnauthorized();
+        }
+    }
     @Configuration
     @EnableWebFluxSecurity
     @Import(SecurityConfig.class)
