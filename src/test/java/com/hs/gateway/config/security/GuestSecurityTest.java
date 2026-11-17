@@ -31,6 +31,25 @@ class GuestSecurityTest {
     }
 
     @Test
+    void coreHealthProbesAreAnonymousOnlyForExactGetPaths() {
+        try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
+            var client = WebTestClient.bindToWebHandler(exchange -> exchange.getResponse().setComplete())
+                    .webFilter(context.getBean(WebFilterChainProxy.class)).build();
+            for (String path : new String[]{"/api/v1/actuator/health",
+                    "/api/v1/actuator/health/readiness", "/api/v1/actuator/health/liveness"}) {
+                client.get().uri(path).exchange().expectStatus().isOk();
+                client.post().uri(path).exchange().expectStatus().isUnauthorized();
+                client.delete().uri(path).exchange().expectStatus().isUnauthorized();
+            }
+            for (String path : new String[]{"/api/v1/actuator/info", "/api/v1/actuator/env",
+                    "/api/v1/actuator/metrics", "/api/v1/actuator/health/db",
+                    "/api/v1/actuator/health/readiness/details", "/api/v1/users/me"}) {
+                client.get().uri(path).exchange().expectStatus().isUnauthorized();
+            }
+        }
+    }
+
+    @Test
     void onlyGuestAiAndPublicListingsAreAnonymousNotAccountHistoryOrAdmin() {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var client = WebTestClient.bindToWebHandler(exchange -> exchange.getResponse().setComplete())

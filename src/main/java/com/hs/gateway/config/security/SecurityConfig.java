@@ -32,6 +32,10 @@ public class SecurityConfig {
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/fallback/**").permitAll()
                         .pathMatchers("/u/payment-proof/**").permitAll()
+                        .pathMatchers(HttpMethod.GET,
+                                API_V1_PREFIX + "/actuator/health",
+                                API_V1_PREFIX + "/actuator/health/readiness",
+                                API_V1_PREFIX + "/actuator/health/liveness").permitAll()
                         // User Service
                         .pathMatchers(API_V1_PREFIX + "/actuator/prometheus").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/public/**").permitAll()

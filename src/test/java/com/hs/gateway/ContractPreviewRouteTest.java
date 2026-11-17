@@ -50,6 +50,17 @@ class ContractPreviewRouteTest {
             var routes = new HsGatewayServerApplication().customRouteLocator(new RouteLocatorBuilder(context),
                     mock(RedisRateLimiter.class), mock(KeyResolver.class), limiter,
                     context.getBeanProvider(SpringCloudCircuitBreakerFilterFactory.class)).getRoutes().collectList().block();
+            for (String suffix : List.of("", "/readiness", "/liveness")) {
+                String healthPath = "/api/v1/actuator/health" + suffix;
+                var healthRoute = firstMatch(routes, HttpMethod.GET, healthPath);
+                assertEquals("core-service-route", healthRoute.getId());
+                assertEquals("lb://hs-core-api", healthRoute.getUri().toString());
+                var healthExchange = MockServerWebExchange.from(MockServerHttpRequest.get(healthPath));
+                healthRoute.getFilters().getFirst().filter(healthExchange, forwarded -> {
+                    assertEquals("/actuator/health" + suffix, forwarded.getRequest().getURI().getPath());
+                    return Mono.empty();
+                }).block();
+            }
             assertEquals("contract-preview-route", firstMatch(routes, HttpMethod.POST, "/api/v1/contracts/c1/previews").getId());
             assertEquals("core-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/contracts/c1/preview-status").getId());
             assertEquals("core-service-route", firstMatch(routes, HttpMethod.GET, "/api/v1/contracts/c1/previews").getId());
