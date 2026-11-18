@@ -196,6 +196,69 @@ class UserHeaderFilterTest {
     }
 
     @Test
+    void coreRouteGetsGatewaySecretAndClientSuppliedSecretIsStripped() {
+        var resolver = mock(UserAccessResolver.class);
+        var filter = new UserHeaderFilter(resolver, new GatewayRouteAuthorization(),
+                mock(GatewayErrorResponseWriter.class));
+        ReflectionTestUtils.setField(filter, "gatewayInternalSecret", "test-only-internal-gateway-secret-32");
+        var jwt = Jwt.withTokenValue("test").header("alg", "none").subject("u-1")
+                .claim("email", "u@example.test").claim("name", "U").build();
+        var auth = new JwtAuthenticationToken(jwt);
+        when(resolver.resolve(auth)).thenReturn(Mono.just(new UserAccess("USER", "")));
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/users/me")
+                        .header("X-Internal-Secret", "forged").header("X-User-Role", "ADMIN"))
+                .mutate().principal(Mono.just(auth)).build();
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR,
+                Route.async().id("core-service-route").uri("lb://hs-core-api").predicate(e -> true).build());
+        var calls = new AtomicInteger();
+        filter.filter(exchange, forwarded -> {
+            calls.incrementAndGet();
+            var headers = forwarded.getRequest().getHeaders();
+            assertThat(headers.get("X-Internal-Secret")).containsExactly("test-only-internal-gateway-secret-32");
+            assertThat(headers.get("X-User-Role")).containsExactly("USER");
+            return Mono.empty();
+        }).block();
+        assertThat(calls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void anonymousCoreRouteNeverForwardsClientSecretOrIdentity() {
+        var filter = new UserHeaderFilter(mock(UserAccessResolver.class), new GatewayRouteAuthorization(),
+                mock(GatewayErrorResponseWriter.class));
+        ReflectionTestUtils.setField(filter, "gatewayInternalSecret", "test-only-internal-gateway-secret-32");
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/public/listings")
+                .header("X-Internal-Secret", "forged").header("X-User-Id", "victim").header("X-User-Role", "ADMIN"));
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR,
+                Route.async().id("core-service-route").uri("lb://hs-core-api").predicate(e -> true).build());
+        var calls = new AtomicInteger();
+        filter.filter(exchange, forwarded -> {
+            calls.incrementAndGet();
+            var headers = forwarded.getRequest().getHeaders();
+            assertThat(headers.get("X-Internal-Secret")).doesNotContain("forged");
+            assertThat(headers.getFirst("X-User-Id")).isNull();
+            assertThat(headers.getFirst("X-User-Role")).isNull();
+            return Mono.empty();
+        }).block();
+        assertThat(calls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void internalAndDotSegmentPathsAreRejectedBeforeReachingCore() {
+        var writer = mock(GatewayErrorResponseWriter.class);
+        when(writer.write(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(Mono.empty());
+        var filter = new UserHeaderFilter(mock(UserAccessResolver.class), new GatewayRouteAuthorization(), writer);
+        for (String path : new String[]{"/api/v1/./internal/users/x/permissions",
+                "/api/v1/api/v1/internal/users/x/permissions", "/api/v1/%2e%2e/internal/users/x/permissions"}) {
+            var calls = new AtomicInteger();
+            filter.filter(MockServerWebExchange.from(MockServerHttpRequest.method(org.springframework.http.HttpMethod.GET, java.net.URI.create(path)).build()), forwarded -> {
+                calls.incrementAndGet();
+                return Mono.empty();
+            }).block();
+            assertThat(calls.get()).as(path).isZero();
+        }
+    }
+
+    @Test
     void encodesDisplayNameAsUtf8Base64ForDownstreamHeaders() {
         assertThat(UserHeaderFilter.encodeDisplayName("Tuấn Đào"))
                 .isEqualTo("VHXhuqVuIMSQw6Bv");

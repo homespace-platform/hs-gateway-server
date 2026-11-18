@@ -10,6 +10,31 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GatewayRouteAuthorizationTest {
     @Test
+    void adminPathsAreProtectedEvenWithRepeatedOrAliasedApiPrefixes() {
+        var authorization = new GatewayRouteAuthorization();
+        for (String path : new String[]{"/api/v1/admin/users", "/api/v1/api/v1/admin/users",
+                "/api/v1/api/v2/ADMIN/users", "/api/v1//admin/users", "/api/v1/admin;x=1/users",
+                "/api/v1/api/v1/notifications/admin/broadcast"}) {
+            var exchange = MockServerWebExchange.from(MockServerHttpRequest.get(path));
+            assertFalse(authorization.isAllowed(exchange, "USER"), path);
+            assertTrue(authorization.isAllowed(exchange, "ADMIN"), path);
+        }
+        assertTrue(authorization.isAllowed(
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/listings/admin-tips")), "USER"));
+    }
+
+    @Test
+    void blocksInternalAndDotSegmentPaths() {
+        var authorization = new GatewayRouteAuthorization();
+        for (String path : new String[]{"/api/v1/internal/users/1/permissions", "/api/v1/api/v1/internal/x",
+                "/api/v1/./admin/users", "/api/v1/a/../admin"}) {
+            assertTrue(authorization.isBlockedPath(MockServerWebExchange.from(MockServerHttpRequest.get(path))), path);
+        }
+        assertFalse(authorization.isBlockedPath(
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/users/me"))));
+    }
+
+    @Test
     void broadcastRequiresAdminWhileFeedRemainsAvailableToUsers() {
         var authorization = new GatewayRouteAuthorization();
         var broadcast = MockServerWebExchange.from(MockServerHttpRequest.post("/api/v1/notifications/admin/broadcast"));

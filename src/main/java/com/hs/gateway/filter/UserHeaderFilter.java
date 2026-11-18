@@ -1,5 +1,6 @@
 package com.hs.gateway.filter;
 
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -35,6 +36,13 @@ public class UserHeaderFilter implements GlobalFilter {
     @Value("${GATEWAY_INTERNAL_SECRET:}")
     private String gatewayInternalSecret;
 
+    @PostConstruct
+    void requireInternalSecret() {
+        if (gatewayInternalSecret == null || gatewayInternalSecret.isBlank()) {
+            throw new IllegalStateException("GATEWAY_INTERNAL_SECRET must not be blank");
+        }
+    }
+
     /**
      * Filter chính của Gateway.
      * Nếu request có JWT hợp lệ thì lấy userId/email, xác định role, kiểm tra quyền truy cập
@@ -46,6 +54,9 @@ public class UserHeaderFilter implements GlobalFilter {
             ServerWebExchange exchange,
             GatewayFilterChain chain
     ) {
+        if (routeAuthorization.isBlockedPath(exchange)) {
+            return errorResponseWriter.write(exchange, ErrorCode.UNAUTHORIZED);
+        }
         ServerWebExchange sanitizedExchange = trustAiRequest(stripUserHeaders(exchange));
         return sanitizedExchange.getPrincipal()
                 .filter(p -> p instanceof JwtAuthenticationToken)
@@ -101,7 +112,8 @@ public class UserHeaderFilter implements GlobalFilter {
         if (route == null) return false;
         return switch (route.getId()) {
             case "ai-service-route", "ai-service-admin-route", "notification-service-route" -> true;
-            default -> false;
+            // Core trusts X-User-* only with this secret; covers every route that targets hs-core-api.
+            default -> route.getUri() != null && "hs-core-api".equals(route.getUri().getHost());
         };
     }
 

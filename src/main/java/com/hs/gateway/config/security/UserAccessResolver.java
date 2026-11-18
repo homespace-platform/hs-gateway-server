@@ -1,9 +1,6 @@
 package com.hs.gateway.config.security;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
 
 import com.hs.gateway.client.UserInternalClient;
 import com.hs.gateway.dto.UserAccess;
@@ -23,13 +20,14 @@ import reactor.core.scheduler.Schedulers;
 @Slf4j
 public class UserAccessResolver {
 
-    private static final List<String> ROLE_PRIORITY = List.of("ADMIN", "USER");
+    private static final Set<String> KNOWN_ROLES = Set.of("ADMIN", "USER");
+    /** Fail-closed result: never derived from the JWT, so a lookup failure can never grant ADMIN. */
+    private static final UserAccess DENIED = new UserAccess("USER", "");
 
     private final ObjectProvider<@NonNull UserInternalClient> userInternalClientProvider;
 
     public Mono<@NonNull UserAccess> resolve(JwtAuthenticationToken jwtAuth) {
         String userId = jwtAuth.getToken().getSubject();
-        String fallbackRole = resolveRoleFromJwt(jwtAuth);
 
         return Mono.fromCallable(() -> {
                     UserInternalClient client = userInternalClientProvider.getIfAvailable();
@@ -37,68 +35,20 @@ public class UserAccessResolver {
                 })
                 .subscribeOn(Schedulers.boundedElastic())
                 .map(response -> {
-                    if (response != null && response.getResult() != null) {
-                        String role = normalizeRole(response.getResult().role());
-                        String authorities = response.getResult().permissions() != null
-                                ? String.join(",", response.getResult().permissions())
-                                : "";
-
-                        return new UserAccess(role.isBlank() ? fallbackRole : role, authorities);
-                    }
-
-                    return new UserAccess(fallbackRole, "");
+                    if (response == null || response.getResult() == null) return DENIED;
+                    String role = normalizeRole(response.getResult().role());
+                    if (!KNOWN_ROLES.contains(role)) return DENIED;
+                    String authorities = response.getResult().permissions() != null
+                            ? String.join(",", response.getResult().permissions())
+                            : "";
+                    return new UserAccess(role, authorities);
                 })
-                .defaultIfEmpty(new UserAccess(fallbackRole, ""))
+                .defaultIfEmpty(DENIED)
                 .onErrorResume(exception -> {
-                    log.warn(
-                            "Could not fetch user access for userId {}. Falling back to JWT role '{}'. Reason: {}",
-                            userId,
-                            fallbackRole,
-                            exception.getMessage()
-                    );
-                    return Mono.just(new UserAccess(fallbackRole, ""));
+                    log.warn("Could not fetch user access for userId {}. Treating as USER without authorities. Reason: {}",
+                            userId, exception.getMessage());
+                    return Mono.just(DENIED);
                 });
-    }
-
-    private String resolveRoleFromJwt(JwtAuthenticationToken jwtAuth) {
-        Object realmAccess = jwtAuth.getToken().getClaims().get("realm_access");
-        if (realmAccess instanceof Map<?, ?> map) {
-            String role = findFirstKnownRole(map.get("roles"));
-            if (!role.isBlank()) {
-                return role;
-            }
-        }
-
-        Object resourceAccess = jwtAuth.getToken().getClaims().get("resource_access");
-        if (resourceAccess instanceof Map<?, ?> clients) {
-            for (Object clientAccess : clients.values()) {
-                if (clientAccess instanceof Map<?, ?> map) {
-                    String role = findFirstKnownRole(map.get("roles"));
-                    if (!role.isBlank()) {
-                        return role;
-                    }
-                }
-            }
-        }
-
-        return "";
-    }
-
-    private String findFirstKnownRole(Object rolesObject) {
-        if (!(rolesObject instanceof Collection<?> roles)) {
-            return "";
-        }
-
-        List<String> normalizedRoles = roles.stream()
-                .filter(Objects::nonNull)
-                .map(Object::toString)
-                .map(this::normalizeRole)
-                .toList();
-
-        return ROLE_PRIORITY.stream()
-                .filter(normalizedRoles::contains)
-                .findFirst()
-                .orElse("");
     }
 
     private String normalizeRole(String role) {
