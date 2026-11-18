@@ -1,0 +1,12 @@
+# Only Maven inputs enter the build context.
+**
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.properties
+!src/
+!src/**
+**/.env*
+**/*.pem
+**/*.key
