@@ -1,0 +1,26 @@
+services:
+    hs-gateway-server:
+        image: ${GATEWAY_IMAGE:?}
+        pull_policy: always
+        restart: unless-stopped
+        mem_limit: 768m
+        environment:
+            SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:?}
+            GATEWAY_INTERNAL_SECRET: ${GATEWAY_INTERNAL_SECRET:?}
+            EUREKA_CLIENT_SERVICE_URL: ${EUREKA_CLIENT_SERVICE_URL:?}
+            JWT_JWK_SET_URI: ${JWT_JWK_SET_URI:?}
+            JWT_ISSUER_URI: ${JWT_ISSUER_URI:?}
+            CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?}
+            REDIS_HOST: ${REDIS_HOST:?}
+            REDIS_PORT: ${REDIS_PORT:?}
+            REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+            GATEWAY_RATE_LIMITER_REPLENISH_RATE: ${GATEWAY_RATE_LIMITER_REPLENISH_RATE:?}
+            GATEWAY_RATE_LIMITER_BURST_CAPACITY: ${GATEWAY_RATE_LIMITER_BURST_CAPACITY:?}
+            GATEWAY_RATE_LIMITER_REQUESTED_TOKENS: ${GATEWAY_RATE_LIMITER_REQUESTED_TOKENS:?}
+            LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT:?}
+            LOGGING_LEVEL_RATELIMIT: ${LOGGING_LEVEL_RATELIMIT:?}
+
+networks:
+    default:
+        external: true
+        name: hs-network
