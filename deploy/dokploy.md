@@ -8,7 +8,7 @@ Tên service, DNS nội bộ và Spring application name đều là `hs-gateway-
 
 1. Infra đang healthy; `hs-network` là overlay attachable. Discovery Compose đã chạy với tên DNS `hs-discovery-server`. Không xóa infra hoặc tạo một mạng khác cùng tên.
 2. GitHub Actions `Build and publish Gateway` đã publish image. Environment bắt buộc có `GATEWAY_IMAGE=nvminh162/hs-gateway-server:latest` hoặc tag SHA đã publish. Workflow giữ nguyên, chỉ test/build/push image; không gọi deploy API.
-3. Giữ file `.env.dokploy` của Gateway ngoài Git. Không thay `GATEWAY_INTERNAL_SECRET`, password Redis, JWT issuer hoặc bỏ kiểm tra auth để sửa lỗi kết nối.
+3. Giữ file `.env.prod` của Gateway ngoài Git. Không thay `GATEWAY_INTERNAL_SECRET`, password Redis, JWT issuer hoặc bỏ kiểm tra auth để sửa lỗi kết nối.
 4. Lưu lại cấu hình và domain của Application Gateway cũ để có thể quay lại. Không chạy song song hai Gateway khi chuyển đổi.
 
 ## 2. Tạo Compose Gateway trên Dokploy
@@ -25,7 +25,7 @@ Tên service, DNS nội bộ và Spring application name đều là `hs-gateway-
    | Autodeploy | Tắt trong lần chuyển đổi đầu |
 
 3. Save. Repo public HTTPS không cần SSH key; private cần quyền đọc. File YAML phải có trên Git trước khi deploy; không dùng file local chưa push.
-4. **Environment**: dán đầy đủ `.env.dokploy` riêng của Gateway, bao gồm `GATEWAY_IMAGE` → Save. Toàn bộ 15 biến tham chiếu trong Compose đều bắt buộc bằng `${VARIABLE:?}`, không có fallback; thiếu hoặc rỗng bất kỳ biến nào sẽ làm `config`/deploy báo lỗi. Compose ánh xạ đủ 14 biến runtime qua `environment:`; biến image dùng ở trường `image`.
+4. **Environment**: dán đầy đủ `.env.prod` riêng của Gateway, bao gồm `GATEWAY_IMAGE` → Save. Toàn bộ 15 biến tham chiếu trong Compose đều bắt buộc bằng `${VARIABLE:?}`, không có fallback; thiếu hoặc rỗng bất kỳ biến nào sẽ làm `config`/deploy báo lỗi. Compose ánh xạ đủ 14 biến runtime qua `environment:`; biến image dùng ở trường `image`.
 5. Kiểm tra các URL công khai/nội bộ, không đổi credential:
 
    ```dotenv
