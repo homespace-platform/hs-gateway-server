@@ -46,6 +46,12 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/news/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/notifications/ping").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/ping").permitAll()
+                        // Health checks of the standalone services (Core's is /actuator/health above).
+                        .pathMatchers(HttpMethod.GET,
+                                API_V1_PREFIX + "/chat/health", API_V1_PREFIX + "/chat/health/**",
+                                API_V1_PREFIX + "/news/health", API_V1_PREFIX + "/news/health/**",
+                                API_V1_PREFIX + "/notifications/health", API_V1_PREFIX + "/notifications/health/**",
+                                API_V1_PREFIX + "/ai/health", API_V1_PREFIX + "/ai/health/**").permitAll()
                         .pathMatchers(API_V1_PREFIX + "/ai/guest/agent/**").permitAll()
                         .pathMatchers(HttpMethod.POST, API_V1_PREFIX + "/ai/property-search").permitAll()
                         .pathMatchers(HttpMethod.GET, API_V1_PREFIX + "/ai/property-search/suggestions").permitAll()
